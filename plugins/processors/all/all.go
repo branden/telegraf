@@ -2,6 +2,7 @@ package all
 
 import (
 	_ "github.com/influxdata/telegraf/plugins/processors/converter"
+	_ "github.com/influxdata/telegraf/plugins/processors/dcos_metadata"
 	_ "github.com/influxdata/telegraf/plugins/processors/enum"
 	_ "github.com/influxdata/telegraf/plugins/processors/override"
 	_ "github.com/influxdata/telegraf/plugins/processors/parser"
