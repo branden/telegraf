@@ -25,6 +25,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/disk"
 	_ "github.com/influxdata/telegraf/plugins/inputs/diskio"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dcos_containers"
+	_ "github.com/influxdata/telegraf/plugins/inputs/dcos_statsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disque"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dmcache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dns_query"
