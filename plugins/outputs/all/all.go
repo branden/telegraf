@@ -9,6 +9,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cratedb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"
+	_ "github.com/influxdata/telegraf/plugins/outputs/dcos_metrics"
 	_ "github.com/influxdata/telegraf/plugins/outputs/discard"
 	_ "github.com/influxdata/telegraf/plugins/outputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/file"

@@ -219,6 +219,14 @@
   version = "v2.0.0"
 
 [[projects]]
+  digest = "1:04bc7498853de10a89da9cdb8d9d1a1ae684e4dcd2b9203a2f8bd06dcede1e37"
+  name = "github.com/coreos/go-systemd"
+  packages = ["activation"]
+  pruneopts = ""
+  revision = "9002847aa1425fb6ac49077c0a630b3b67e0fbfd"
+  version = "v18"
+
+[[projects]]
   branch = "master"
   digest = "1:65ae2d1625584ba8d16d1e15b25db1fc62334e2040f22dbbbdc7531c909843b2"
   name = "github.com/couchbase/go-couchbase"
@@ -255,6 +263,25 @@
   pruneopts = ""
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f409c9b273ad1b344aab73afab72a4e818e8a6f0cda815b70975f129ce774cc5"
+  name = "github.com/dcos/dcos-go"
+  packages = ["store"]
+  pruneopts = ""
+  revision = "0f9f3da35068c4b3cdc15e441f574d7c01beff13"
+
+[[projects]]
+  digest = "1:d061734870c6f8f5553f6156faea85efc9395ab011ecdb42f554d3b0b83fe4f7"
+  name = "github.com/dcos/dcos-metrics"
+  packages = [
+    "producers",
+    "producers/http",
+    "util/producers",
+  ]
+  pruneopts = ""
+  revision = "d9a66c43278f20a33342a090252b559fa7022a67"
 
 [[projects]]
   branch = "master"
@@ -474,7 +501,11 @@
 [[projects]]
   digest = "1:673df1d02ca0c6f51458fe94bbb6fae0b05e54084a31db2288f1c4321255c2da"
   name = "github.com/gogo/protobuf"
-  packages = ["proto"]
+  packages = [
+    "gogoproto",
+    "proto",
+    "protoc-gen-gogo/descriptor",
+  ]
   pruneopts = ""
   revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
   version = "v1.1.1"
@@ -701,7 +732,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e7737c09200582508f4f67227c39e7c4667cc6067a6d2b2e679654e43e8a8cb4"
+  digest = "1:db246295180db1e93b0eb31885a7cb01b79a37e8eb0337aa3f8eb9d1a8c1b1c8"
   name = "github.com/kubernetes/apimachinery"
   packages = ["pkg/api/resource"]
   pruneopts = ""
@@ -742,7 +773,23 @@
 [[projects]]
   digest = "1:9658650e3aea0dab1bca5249d599d42a4b0313caa36e26e86f424b14707e3d55"
   name = "github.com/mesos/mesos-go"
-  packages = ["api/v1"]
+  packages = [
+    "api/v1/lib",
+    "api/v1/lib/agent",
+    "api/v1/lib/agent/calls",
+    "api/v1/lib/client",
+    "api/v1/lib/debug",
+    "api/v1/lib/encoding",
+    "api/v1/lib/encoding/codecs",
+    "api/v1/lib/encoding/framing",
+    "api/v1/lib/encoding/json",
+    "api/v1/lib/encoding/proto",
+    "api/v1/lib/httpcli",
+    "api/v1/lib/httpcli/apierrors",
+    "api/v1/lib/httpcli/httpagent",
+    "api/v1/lib/recordio",
+    "api/v1/lib/roles",
+  ]
   pruneopts = ""
   revision = "7ec2a64a36fe5bc22d3701558bc9aa1ac6acfac5"
   version = "v0.0.8"
@@ -909,6 +956,17 @@
   pruneopts = ""
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:cc416bfea57a5afff506404909d5d1cc64fadabd723282df52f1fa2450d13a0c"
+  name = "github.com/pquerna/ffjson"
+  packages = [
+    "fflib/v1",
+    "fflib/v1/internal",
+  ]
+  pruneopts = ""
+  revision = "e517b90714f7c0eabe6d2e570a5886ae077d6db6"
 
 [[projects]]
   digest = "1:91bba2c945b34083016f01f300ead7a080b2e5e7f4c21cddbbf6e5bd95241823"
@@ -1527,6 +1585,8 @@
     "github.com/aws/aws-sdk-go/service/kinesis",
     "github.com/bsm/sarama-cluster",
     "github.com/couchbase/go-couchbase",
+    "github.com/dcos/dcos-metrics/producers",
+    "github.com/dcos/dcos-metrics/producers/http",
     "github.com/denisenkom/go-mssqldb",
     "github.com/dgrijalva/jwt-go",
     "github.com/docker/docker/api/types",
@@ -1570,7 +1630,11 @@
     "github.com/kballard/go-shellquote",
     "github.com/kubernetes/apimachinery/pkg/api/resource",
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
-    "github.com/mesos/mesos-go/api/v1",
+    "github.com/mesos/mesos-go/api/v1/lib",
+    "github.com/mesos/mesos-go/api/v1/lib/agent",
+    "github.com/mesos/mesos-go/api/v1/lib/agent/calls",
+    "github.com/mesos/mesos-go/api/v1/lib/httpcli",
+    "github.com/mesos/mesos-go/api/v1/lib/httpcli/httpagent",
     "github.com/miekg/dns",
     "github.com/multiplay/go-ts3",
     "github.com/nats-io/gnatsd/server",
