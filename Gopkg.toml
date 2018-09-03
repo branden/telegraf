@@ -269,3 +269,7 @@
 [[constraint]]
   name = "github.com/dcos/dcos-metrics"
   revision = "d9a66c43278f20a33342a090252b559fa7022a67"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/dcos/dcos-go"

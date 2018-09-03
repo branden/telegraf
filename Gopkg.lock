@@ -268,7 +268,11 @@
   branch = "master"
   digest = "1:f409c9b273ad1b344aab73afab72a4e818e8a6f0cda815b70975f129ce774cc5"
   name = "github.com/dcos/dcos-go"
-  packages = ["store"]
+  packages = [
+    "dcos",
+    "dcos/http/transport",
+    "store",
+  ]
   pruneopts = ""
   revision = "0f9f3da35068c4b3cdc15e441f574d7c01beff13"
 
@@ -1544,6 +1548,19 @@
   version = "v5.0.70"
 
 [[projects]]
+  digest = "1:c65774d041fcaea9886da4dfd03c796ab7ecf33a035d5c264140570135e72273"
+  name = "gopkg.in/square/go-jose.v2"
+  packages = [
+    ".",
+    "cipher",
+    "json",
+    "jwt",
+  ]
+  pruneopts = ""
+  revision = "e94fb177d3668d35ab39c61cbb2f311550557e83"
+  version = "v2.2.2"
+
+[[projects]]
   branch = "v1"
   digest = "1:a96d16bd088460f2e0685d46c39bcf1208ba46e0a977be2df49864ec7da447dd"
   name = "gopkg.in/tomb.v1"
@@ -1585,6 +1602,8 @@
     "github.com/aws/aws-sdk-go/service/kinesis",
     "github.com/bsm/sarama-cluster",
     "github.com/couchbase/go-couchbase",
+    "github.com/dcos/dcos-go/dcos",
+    "github.com/dcos/dcos-go/dcos/http/transport",
     "github.com/dcos/dcos-metrics/producers",
     "github.com/dcos/dcos-metrics/producers/http",
     "github.com/denisenkom/go-mssqldb",
