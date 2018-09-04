@@ -463,7 +463,7 @@ func TestTranslate(t *testing.T) {
 				},
 				Datapoints: []producers.Datapoint{
 					producers.Datapoint{
-						Name:      "dcos.metrics.container.metric1",
+						Name:      "prefix.foo.metric1",
 						Value:     uint64(0),
 						Timestamp: timestamp,
 						Tags: map[string]string{
@@ -472,7 +472,7 @@ func TestTranslate(t *testing.T) {
 						},
 					},
 					producers.Datapoint{
-						Name:      "dcos.metrics.container.metric2",
+						Name:      "prefix.foo.metric2",
 						Value:     uint64(1),
 						Timestamp: timestamp,
 						Tags: map[string]string{
@@ -515,7 +515,7 @@ func TestTranslate(t *testing.T) {
 				},
 				Datapoints: []producers.Datapoint{
 					producers.Datapoint{
-						Name:      "dcos.metrics.container.metric1",
+						Name:      "prefix.foo.metric1",
 						Value:     uint64(0),
 						Timestamp: timestamp,
 						Tags: map[string]string{
@@ -523,7 +523,7 @@ func TestTranslate(t *testing.T) {
 						},
 					},
 					producers.Datapoint{
-						Name:      "dcos.metrics.container.metric2",
+						Name:      "prefix.foo.metric2",
 						Value:     uint64(1),
 						Timestamp: timestamp,
 						Tags: map[string]string{
@@ -546,13 +546,14 @@ func TestTranslate(t *testing.T) {
 					"label_name":   "label_value",
 				},
 				fields: map[string]interface{}{
-					"value": uint64(0),
+					"metric1": uint64(0),
+					"metric2": uint64(1),
 				},
 				tm: tm,
 				tp: telegraf.Untyped,
 			},
 			output: producers.MetricsMessage{
-				Name: "dcos.metrics.app.foo",
+				Name: "dcos.metrics.app",
 				Dimensions: producers.Dimensions{
 					MesosID:       translator.MesosID,
 					ClusterID:     translator.DCOSClusterID,
@@ -563,8 +564,14 @@ func TestTranslate(t *testing.T) {
 				},
 				Datapoints: []producers.Datapoint{
 					producers.Datapoint{
-						Name:      "dcos.metrics.app.foo",
+						Name:      "prefix.foo.metric1",
 						Value:     uint64(0),
+						Timestamp: timestamp,
+						Tags:      map[string]string{"label_name": "label_value"},
+					},
+					producers.Datapoint{
+						Name:      "prefix.foo.metric2",
+						Value:     uint64(1),
 						Timestamp: timestamp,
 						Tags:      map[string]string{"label_name": "label_value"},
 					},

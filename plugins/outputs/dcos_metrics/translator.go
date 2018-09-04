@@ -93,7 +93,7 @@ func (t *producerTranslator) containerMetricsMessage(m telegraf.Metric) producer
 
 	return producers.MetricsMessage{
 		Name:       producers.ContainerMetricPrefix,
-		Datapoints: datapointsFromMetric(m, producers.ContainerMetricPrefix, dpTags),
+		Datapoints: datapointsFromMetric(m, dpTags),
 		Dimensions: producers.Dimensions{
 			MesosID:       t.MesosID,
 			ClusterID:     t.DCOSClusterID,
@@ -116,11 +116,9 @@ func (t *producerTranslator) appMetricsMessage(m telegraf.Metric) producers.Metr
 	// We don't use metric_type.
 	delete(tags, "metric_type")
 
-	fieldNamePrefix := producers.AppMetricPrefix + "." + metricNameSuffix(m.Name())
-
 	return producers.MetricsMessage{
-		Name:       fieldNamePrefix,
-		Datapoints: datapointsFromMetric(m, fieldNamePrefix, tags),
+		Name:       producers.AppMetricPrefix,
+		Datapoints: datapointsFromMetric(m, tags),
 		Dimensions: producers.Dimensions{
 			MesosID:       t.MesosID,
 			ClusterID:     t.DCOSClusterID,
@@ -454,10 +452,9 @@ func (t *producerTranslator) systemMetricsMessage(m telegraf.Metric) producers.M
 	}
 }
 
-// datapointsFromMetric returns a []producers.Datapoint for the fields in m.
-// Tags are applied to each Datapoint, and each Datapoint name is prefixed with namePrefix.
+// datapointsFromMetric returns a []producers.Datapoint for the fields in m, with tags set on all Datapoints.
 // Datapoints are sorted by name for stability.
-func datapointsFromMetric(m telegraf.Metric, namePrefix string, tags map[string]string) []producers.Datapoint {
+func datapointsFromMetric(m telegraf.Metric, tags map[string]string) []producers.Datapoint {
 	fields := m.Fields()
 	timestamp := timestampFromMetric(m)
 
@@ -474,10 +471,12 @@ func datapointsFromMetric(m telegraf.Metric, namePrefix string, tags map[string]
 	for i, fn := range fns {
 		// If we have a single metric field whose name is value, omit it from the complete field name.
 		var name string
-		if len(fns) == 1 && fn == "value" {
-			name = namePrefix
+		if m.Name() == "" {
+			name = fn
+		} else if len(fns) == 1 && fn == "value" {
+			name = m.Name()
 		} else {
-			name = namePrefix + "." + fn
+			name = m.Name() + "." + fn
 		}
 
 		datapoints[i] = producers.Datapoint{
