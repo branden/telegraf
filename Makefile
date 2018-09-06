@@ -92,6 +92,14 @@ check: fmtcheck vet
 test-all: fmtcheck vet
 	go test ./...
 
+.PHONY: test-race-dcos
+test-race-dcos:
+	go test -race ./plugins/inputs/dcos
+	go test -race ./plugins/inputs/dcos_containers/
+	go test -race ./plugins/inputs/dcos_statsd/
+	go test -race ./plugins/outputs/dcos_metrics/
+	go test -race ./plugins/processors/dcos_metadata/
+
 .PHONY: package
 package:
 	./scripts/build.py --package --platform=all --arch=all
