@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"net"
 	"net/http"
 	"testing"
 	"time"
@@ -138,8 +139,69 @@ func TestDCOSMetricsNaNValue(t *testing.T) {
 	}
 }
 
+func TestDCOSMetricsNilValue(t *testing.T) {
+	// Assert that the server returns node metrics, even when supplied with multiple metrics messages,
+	// some of which have missing fields
+
+	dcosMetrics, url, err := setupDCOSMetrics()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dcosMetrics.Close()
+
+	m1, err := metric.New(
+		"dcos.metrics.node.system",
+		map[string]string{},
+		map[string]interface{}{"load1": uint64(123), "load5": uint64(1234), "load15": uint64(12345)},
+		time.Now(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m2, err := metric.New(
+		"dcos.metrics.node.system",
+		map[string]string{"mesos_id": "fake mesos id"},
+		map[string]interface{}{"uptime": uint64(12345)},
+		time.Now(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = dcosMetrics.Write([]telegraf.Metric{m1, m2})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.Get(url + "/v0/node")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected status code 200, got %d", resp.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var metrics producers.MetricsMessage
+	json.Unmarshal(body, &metrics)
+
+	results := map[string]interface{}{}
+	for _, dp := range metrics.Datapoints {
+		results[dp.Name] = dp.Value
+	}
+	if len(results) != 4 {
+		t.Fatal("datapoint missing in response")
+	}
+}
+
 func setupDCOSMetrics() (DCOSMetrics, string, error) {
-	serverHostPort := "localhost:50001"
+	serverHostPort := fmt.Sprintf("localhost:%d", findFreePort())
 	serverURL := fmt.Sprintf("http://%s", serverHostPort)
 
 	dm := DCOSMetrics{
@@ -151,9 +213,15 @@ func setupDCOSMetrics() (DCOSMetrics, string, error) {
 		DCOSNodePrivateIP: "10.0.0.1",
 	}
 
-	if err := dm.Connect(); err != nil {
-		return dm, serverURL, err
-	}
+	return dm, serverURL, dm.Connect()
+}
 
-	return dm, serverURL, nil
+// findFreePort momentarily listens on :0, then closes the connection and
+// returns the port assigned
+func findFreePort() int {
+	ln, _ := net.Listen("tcp", ":0")
+	ln.Close()
+
+	addr := ln.Addr().(*net.TCPAddr)
+	return addr.Port
 }
