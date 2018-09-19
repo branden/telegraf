@@ -2,6 +2,7 @@ package dcos_metrics
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -83,6 +84,14 @@ func TestDCOSMetricsNaNValue(t *testing.T) {
 	}
 	defer dcosMetrics.Close()
 
+	err = waitFor(func() bool {
+		_, err := http.Get(url + "/health")
+		return err == nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	m, err := metric.New(
 		"prefix.foo",
 		map[string]string{
@@ -148,6 +157,14 @@ func TestDCOSMetricsNilValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer dcosMetrics.Close()
+
+	err = waitFor(func() bool {
+		_, err := http.Get(url + "/health")
+		return err == nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	m1, err := metric.New(
 		"dcos.metrics.node.system",
@@ -224,4 +241,26 @@ func findFreePort() int {
 
 	addr := ln.Addr().(*net.TCPAddr)
 	return addr.Port
+}
+
+// waitFor waits five seconds for a condition to be true
+func waitFor(cond func() bool) error {
+	done := make(chan bool)
+
+	go func() {
+		for {
+			if cond() {
+				done <- true
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-time.After(5 * time.Second):
+		return errors.New("timed out waiting for condition")
+	}
 }
