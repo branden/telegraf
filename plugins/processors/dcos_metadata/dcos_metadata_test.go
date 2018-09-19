@@ -115,14 +115,14 @@ var (
 			fixture: "nested",
 			inputs: []telegraf.Metric{
 				newMetric("test",
-					map[string]string{"container_id": "xyz123"},
+					map[string]string{"container_id": "abc123"},
 					map[string]interface{}{"value": int64(1)},
 					time.Now(),
 				),
 			},
 			expected: []telegraf.Metric{
 				newMetric("test",
-					map[string]string{"container_id": "xyz123"},
+					map[string]string{"container_id": "abc123"},
 					map[string]interface{}{"value": int64(1)},
 					time.Now(),
 				),
@@ -130,7 +130,7 @@ var (
 			cachedContainers: map[string]containerInfo{},
 			// We do not expect the cache to be updated
 			containers: map[string]containerInfo{
-				"xyz123": containerInfo{"xyz123", "task", "executor", "framework",
+				"abc123": containerInfo{"abc123", "task", "executor", "framework",
 					map[string]string{}},
 			},
 		},

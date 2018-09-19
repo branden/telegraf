@@ -230,11 +230,8 @@ func getContainerID(statuses []mesos.TaskStatus) string {
 	// Container ID is held in task status
 	for _, s := range statuses {
 		if cs := s.GetContainerStatus(); cs != nil {
+			// TODO (philipnrmn) account for deeply-nested containers
 			if cid := cs.GetContainerID(); cid != nil {
-				// TODO (philipnrmn) account for deeply-nested containers
-				if p := cid.GetParent(); p != nil {
-					return p.GetValue()
-				}
 				return cid.GetValue()
 			}
 		}
