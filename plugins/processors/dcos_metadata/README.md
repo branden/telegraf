@@ -16,6 +16,12 @@ appropriate metadata in the form of DC/OS primitives.
   timeout = "10s"
   ## The minimum period between requests to the mesos agent
   rate_limit = "5s"
+  ## List of labels to always add to each metric as tags
+  whitelist = []
+  ## List of prefixes a label should have in order to be added
+  ## to each metric as tags; the prefix is stripped from the
+  ## label when tagging
+  whitelist_prefix = []
   ## Optional IAM configuration
   # ca_certificate_path = "/run/dcos/pki/CA/ca-bundle.crt"
   # iam_config_path = "/run/dcos/etc/dcos-telegraf/service_account.json"
@@ -31,9 +37,11 @@ This process adds the following tags to any metric with a container_id tag set:
  - `service_name` - the name of the service (mesos framework) which scheduled 
                     the task associated with this container
 
-Additionally, any task labels which are prefixed with `DCOS_METRICS_` are added
-to each metric as a tag. For example, the application configuration would have
-every metric associated with it decorated with a `FOO=bar` tag.
+Additionally, any task labels which are prefixed with strings included in the configurable whitelist of prefixes
+(`whitelist_prefix`) are added to each metric as a tag. For example, the application configuration would have every
+metric associated with it decorated with a `FOO=bar` tag if `whitelist_prefix` was configured to include
+`DCOS_METRICS_`. Any task labels that are included in the configurable whitelist (`whitelist`) are also added to each
+metric as a tag.
 
 ```
 {
