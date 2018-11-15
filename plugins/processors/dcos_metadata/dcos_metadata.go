@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,15 +25,16 @@ import (
 )
 
 type DCOSMetadata struct {
-	MesosAgentUrl     string
-	Timeout           internal.Duration
-	RateLimit         internal.Duration
-	CaCertificatePath string
-	IamConfigPath     string
-	containers        map[string]containerInfo
-	mu                sync.Mutex
-	once              Once
-	client            *httpcli.Client
+	MesosAgentUrl              string
+	Timeout                    internal.Duration
+	RateLimit                  internal.Duration
+	CaCertificatePath          string
+	IamConfigPath              string
+	Whitelist, WhitelistPrefix []string
+	containers                 map[string]containerInfo
+	mu                         sync.Mutex
+	once                       Once
+	client                     *httpcli.Client
 }
 
 // containerInfo is a tuple of metadata which we use to map a container ID to
@@ -52,9 +54,15 @@ const sampleConfig = `
 	timeout = "10s"
 	## The minimum period between requests to the mesos agent
 	rate_limit = "5s"
-  ## Optional IAM configuration
-  # ca_certificate_path = "/run/dcos/pki/CA/ca-bundle.crt"
-  # iam_config_path = "/run/dcos/etc/dcos-telegraf/service_account.json"
+	## List of labels to always add to each metric as tags
+	whitelist = []
+	## List of prefixes a label should have in order to be added
+	## to each metric as tags; the prefix is stripped from the
+	## label when tagging
+	whitelist_prefix = []
+	## Optional IAM configuration
+	# ca_certificate_path = "/run/dcos/pki/CA/ca-bundle.crt"
+	# iam_config_path = "/run/dcos/etc/dcos-telegraf/service_account.json"
 `
 
 // SampleConfig returns the default configuration
@@ -110,6 +118,11 @@ func (dm *DCOSMetadata) Apply(in ...telegraf.Metric) []telegraf.Metric {
 // the rate_limit option in configuration. Optionally, the container IDs which
 // caused the refresh may be passed in to be logged.
 func (dm *DCOSMetadata) refresh(cids ...string) {
+	whitelistMap := map[string]bool{}
+	for _, label := range dm.Whitelist {
+		whitelistMap[label] = true
+	}
+
 	dm.once.Do(func() {
 		// Subsequent calls to refresh() will be ignored until the RateLimit period
 		// has expired
@@ -137,7 +150,7 @@ func (dm *DCOSMetadata) refresh(cids ...string) {
 			log.Printf("E! %s", err)
 			return
 		}
-		err = dm.cache(state)
+		err = dm.cache(state, whitelistMap)
 		if err != nil {
 			log.Printf("E! %s", err)
 		}
@@ -145,7 +158,8 @@ func (dm *DCOSMetadata) refresh(cids ...string) {
 }
 
 // getState requests state from the operator API
-func (dm *DCOSMetadata) getState(ctx context.Context, cli calls.Sender) (*agent.Response_GetState, error) {
+func (dm *DCOSMetadata) getState(ctx context.Context, cli calls.Sender) (*agent.Response_GetState,
+	error) {
 	resp, err := cli.Send(ctx, calls.NonStreaming(calls.GetState()))
 	if err != nil {
 		return nil, err
@@ -163,7 +177,8 @@ func (dm *DCOSMetadata) getState(ctx context.Context, cli calls.Sender) (*agent.
 }
 
 // cache caches container info from state
-func (dm *DCOSMetadata) cache(gs *agent.Response_GetState) error {
+func (dm *DCOSMetadata) cache(gs *agent.Response_GetState,
+	whitelist map[string]bool) error {
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
@@ -195,7 +210,7 @@ func (dm *DCOSMetadata) cache(gs *agent.Response_GetState) error {
 				taskName:      t.GetName(),
 				executorName:  eName,
 				frameworkName: frameworkNames[t.GetFrameworkID().Value],
-				taskLabels:    mapTaskLabels(t.GetLabels()),
+				taskLabels:    mapTaskLabels(t.GetLabels(), whitelist, dm.WhitelistPrefix),
 			}
 		}
 		if pcid != "" {
@@ -296,16 +311,27 @@ func mapExecutorNames(ge *agent.Response_GetExecutors) map[string]string {
 	return results
 }
 
-// mapTaskLabels returns a map of all task labels prefixed DCOS_METRICS_
-func mapTaskLabels(labels *mesos.Labels) map[string]string {
+func containsWhitelistedPrefix(key string, whitelist []string) (prefix string, contains bool) {
+	for _, pre := range whitelist {
+		if strings.HasPrefix(key, pre) {
+			return pre, true
+		}
+	}
+	return "", false
+}
+
+// mapTaskLabels returns a map of all task labels included in the list of
+// whitelisted labels or prefixed with strings in the prefix whitelist
+func mapTaskLabels(labels *mesos.Labels, whitelisted map[string]bool,
+	whitelistPrefix []string) map[string]string {
 	results := map[string]string{}
 	if labels != nil {
 		for _, l := range labels.GetLabels() {
 			k := l.GetKey()
-			if len(k) > 13 {
-				if k[:13] == "DCOS_METRICS_" {
-					results[k[13:]] = l.GetValue()
-				}
+			if whitelisted[k] {
+				results[k] = l.GetValue()
+			} else if pre, ok := containsWhitelistedPrefix(k, whitelistPrefix); ok && len(k) > len(pre) {
+				results[k[len(pre):]] = l.GetValue()
 			}
 		}
 	}

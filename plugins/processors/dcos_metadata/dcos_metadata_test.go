@@ -11,9 +11,10 @@ import (
 )
 
 type testCase struct {
-	fixture  string
-	inputs   []telegraf.Metric
-	expected []telegraf.Metric
+	fixture                    string
+	whitelist, whitelistPrefix []string
+	inputs                     []telegraf.Metric
+	expected                   []telegraf.Metric
 	// cachedContainers prepopulates the plugin with container info
 	cachedContainers map[string]containerInfo
 	// containers is how the dm.containers map should look after
@@ -31,7 +32,8 @@ var (
 		},
 		// One metric, cached state; tags are added
 		testCase{
-			fixture: "normal",
+			fixture:         "normal",
+			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
 				newMetric("test",
 					map[string]string{"container_id": "abc123"},
@@ -63,7 +65,7 @@ var (
 					map[string]string{"FOO": "bar", "BAZ": "qux"}},
 			},
 		},
-		// One metric, no cached state; no tags are added but state is updated
+		// One metric, no cached state; no tags are added but state is updated (no additional whitelisted tags)
 		testCase{
 			fixture: "fresh",
 			inputs: []telegraf.Metric{
@@ -85,13 +87,98 @@ var (
 			// We do expect the cache to be updated when apply is done
 			containers: map[string]containerInfo{
 				"abc123": containerInfo{"abc123", "task", "executor", "framework",
-					// Ensure that the tags are picked up from state
+					// No whitelist/whitelisted prefixes configured
+					map[string]string{}},
+			},
+		},
+		// One metric, no cached state; no tags are added but state is updated (with prefix-whitelisted tags)
+		testCase{
+			fixture:         "fresh",
+			whitelistPrefix: []string{"DCOS_METRICS_"},
+			inputs: []telegraf.Metric{
+				newMetric("test",
+					map[string]string{"container_id": "abc123"},
+					map[string]interface{}{"value": int64(1)},
+					time.Now(),
+				),
+			},
+			expected: []telegraf.Metric{
+				newMetric("test",
+					// We don't expect tags, since no cache exists
+					map[string]string{"container_id": "abc123"},
+					map[string]interface{}{"value": int64(1)},
+					time.Now(),
+				),
+			},
+			cachedContainers: map[string]containerInfo{},
+			// We do expect the cache to be updated when apply is done
+			containers: map[string]containerInfo{
+				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+					// Ensure that the tags are picked up from state, including whitelisted DCOS_METRICS_-prefixed ones
 					map[string]string{"FOO": "bar", "BAZ": "qux"}},
+			},
+		},
+		// One metric, no cached state; no tags are added but state is updated (with a whitelisted tag,
+		// no prefix-whitelisted tags)
+		testCase{
+			fixture:   "fresh",
+			whitelist: []string{"WHITELISTED_METRIC"},
+			inputs: []telegraf.Metric{
+				newMetric("test",
+					map[string]string{"container_id": "abc123"},
+					map[string]interface{}{"value": int64(1)},
+					time.Now(),
+				),
+			},
+			expected: []telegraf.Metric{
+				newMetric("test",
+					// We don't expect tags, since no cache exists
+					map[string]string{"container_id": "abc123"},
+					map[string]interface{}{"value": int64(1)},
+					time.Now(),
+				),
+			},
+			cachedContainers: map[string]containerInfo{},
+			// We do expect the cache to be updated when apply is done
+			containers: map[string]containerInfo{
+				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+					// Ensure that the tags are picked up from state, including whitelisted "WHITELISTED_METRIC" tag
+					map[string]string{"WHITELISTED_METRIC": "foobar"}},
+			},
+		},
+		// One metric, no cached state; no tags are added but state is updated (
+		// with both whitelisted and prefix-whitelisted tags)
+		testCase{
+			fixture:         "fresh",
+			whitelist:       []string{"WHITELISTED_METRIC"},
+			whitelistPrefix: []string{"DCOS_METRICS_"},
+			inputs: []telegraf.Metric{
+				newMetric("test",
+					map[string]string{"container_id": "abc123"},
+					map[string]interface{}{"value": int64(1)},
+					time.Now(),
+				),
+			},
+			expected: []telegraf.Metric{
+				newMetric("test",
+					// We don't expect tags, since no cache exists
+					map[string]string{"container_id": "abc123"},
+					map[string]interface{}{"value": int64(1)},
+					time.Now(),
+				),
+			},
+			cachedContainers: map[string]containerInfo{},
+			// We do expect the cache to be updated when apply is done
+			containers: map[string]containerInfo{
+				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+					// Ensure that the tags are picked up from state, including all whitelisted ones
+					map[string]string{"FOO": "bar", "BAZ": "qux", "WHITELISTED_METRIC": "foobar"}},
 			},
 		},
 		// One metric without a container ID; nothing to do
 		testCase{
-			fixture: "unrelated",
+			fixture:         "unrelated",
+			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
 				newMetric("test",
 					map[string]string{}, // no container_id tag
@@ -112,7 +199,8 @@ var (
 		},
 		// Fetching a nested container ID; not cached
 		testCase{
-			fixture: "nested",
+			fixture:         "nested",
+			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
 				newMetric("test",
 					map[string]string{"container_id": "abc123"},
@@ -139,7 +227,8 @@ var (
 		},
 		// Fetching a nested container ID; cached
 		testCase{
-			fixture: "nested",
+			fixture:         "nested",
+			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
 				newMetric("test",
 					map[string]string{"container_id": "abc123"},
@@ -190,7 +279,8 @@ var (
 		},
 		// No executor;
 		testCase{
-			fixture: "noexecutor",
+			fixture:         "noexecutor",
+			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
 				newMetric("test",
 					map[string]string{"container_id": "abc123"},
@@ -229,10 +319,12 @@ func TestApply(t *testing.T) {
 			defer teardown()
 
 			dm := DCOSMetadata{
-				MesosAgentUrl: server.URL,
-				Timeout:       internal.Duration{Duration: 100 * time.Millisecond},
-				RateLimit:     internal.Duration{Duration: 50 * time.Millisecond},
-				containers:    tc.cachedContainers,
+				MesosAgentUrl:   server.URL,
+				Timeout:         internal.Duration{Duration: 100 * time.Millisecond},
+				RateLimit:       internal.Duration{Duration: 50 * time.Millisecond},
+				Whitelist:       tc.whitelist,
+				WhitelistPrefix: tc.whitelistPrefix,
+				containers:      tc.cachedContainers,
 			}
 
 			outputs := dm.Apply(tc.inputs...)
