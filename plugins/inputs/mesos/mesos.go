@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/dcosutil"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
@@ -35,7 +36,7 @@ type Mesos struct {
 	SlaveCols  []string `toml:"slave_collections"`
 	//SlaveTasks bool
 	tls.ClientConfig
-	DCOSConfig
+	dcosutil.DCOSConfig
 
 	initialized bool
 	client      *http.Client
@@ -302,19 +303,21 @@ func (m *Mesos) createHttpClient() (*http.Client, error) {
 	}
 
 	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy:           http.ProxyFromEnvironment,
-			TLSClientConfig: tlsCfg,
-		},
+		Transport: dcosutil.NewRoundTripper(
+			&http.Transport{
+				Proxy:           http.ProxyFromEnvironment,
+				TLSClientConfig: tlsCfg,
+			},
+			m.UserAgent),
 		Timeout: 4 * time.Second,
 	}
 
 	if m.CACertificatePath != "" {
-		transport, err := m.DCOSConfig.transport()
+		transport, err := m.DCOSConfig.Transport()
 		if err != nil {
 			return nil, fmt.Errorf("error creating transport: %s", err)
 		}
-		client.Transport = transport
+		client.Transport = dcosutil.NewRoundTripper(transport, m.UserAgent)
 	}
 
 	return client, nil

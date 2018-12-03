@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/influxdata/telegraf/dcosutil"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -613,14 +615,26 @@ func startTestServer(t *testing.T) *httptest.Server {
 type testCase struct {
 	fixture              string
 	tlsConfig            tls.ClientConfig
-	dcosConfig           DCOSConfig
+	dcosConfig           dcosutil.DCOSConfig
 	header, expHeaderVal string
-	userAgent            string
 	expClientErr         error
 }
 
 var (
 	TEST_CASES = []testCase{
+		{
+			fixture:      "Default user-agent header",
+			header:       "User-Agent",
+			expHeaderVal: "Telegraf/" + internal.Version(),
+		},
+		{
+			fixture: "Configured user-agent header",
+			dcosConfig: dcosutil.DCOSConfig{
+				UserAgent: "configured-telegraf-mesos",
+			},
+			header:       "User-Agent",
+			expHeaderVal: "configured-telegraf-mesos/" + internal.Version(),
+		},
 		{
 			fixture: "TLS",
 			tlsConfig: tls.ClientConfig{
@@ -631,7 +645,7 @@ var (
 		},
 		{
 			fixture: "TLS CACert",
-			dcosConfig: DCOSConfig{
+			dcosConfig: dcosutil.DCOSConfig{
 				CACertificatePath: pki.CACertPath(),
 			},
 		},
@@ -642,14 +656,14 @@ var (
 				TLSCert: pki.ClientCertPath(),
 				TLSKey:  pki.ClientKeyPath(),
 			},
-			dcosConfig: DCOSConfig{
+			dcosConfig: dcosutil.DCOSConfig{
 				CACertificatePath: pki.CACertPath(),
 			},
 			expClientErr: errors.New("received both TLS and IAM configs but only expected one"),
 		},
 		{
-			fixture: "IAM auth token header",
-			dcosConfig: DCOSConfig{
+			fixture: "[IAM] Auth token header",
+			dcosConfig: dcosutil.DCOSConfig{
 				CACertificatePath: pki.CACertPath(),
 				IAMConfigPath:     tmpServiceAcctFile,
 			},
@@ -657,24 +671,23 @@ var (
 			expHeaderVal: "token=" + testToken,
 		},
 		{
-			fixture: "Default user-agent header",
-			dcosConfig: DCOSConfig{
+			fixture: "[IAM] Default user-agent header",
+			dcosConfig: dcosutil.DCOSConfig{
 				CACertificatePath: pki.CACertPath(),
 				IAMConfigPath:     tmpServiceAcctFile,
 			},
 			header:       "User-Agent",
-			userAgent:    "",
-			expHeaderVal: "dcos-go",
+			expHeaderVal: "Telegraf/" + internal.Version(),
 		},
 		{
-			fixture: "Configured user-agent header",
-			dcosConfig: DCOSConfig{
+			fixture: "[IAM] Configured user-agent header",
+			dcosConfig: dcosutil.DCOSConfig{
 				CACertificatePath: pki.CACertPath(),
 				IAMConfigPath:     tmpServiceAcctFile,
-				UserAgent:         "telegraf-mesos",
+				UserAgent:         "configured-telegraf-mesos",
 			},
 			header:       "User-Agent",
-			expHeaderVal: "telegraf-mesos",
+			expHeaderVal: "configured-telegraf-mesos/" + internal.Version(),
 		},
 	}
 )
@@ -706,20 +719,20 @@ func TestCreateHTTPClient(t *testing.T) {
 			}
 
 			if tc.header != "" {
-				tokenTestServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				headerTestServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					headerVal := r.Header.Get(tc.header)
 					if headerVal != tc.expHeaderVal {
 						t.Fatalf(fmt.Sprintf("Expected request header: `%s: %s`. Got: %s", tc.header,
 							tc.expHeaderVal, headerVal))
 					}
 				}))
-				defer tokenTestServer.Close()
+				defer headerTestServer.Close()
 
 				c := http.Client{
 					Transport: client.Transport,
 				}
 
-				resp, err := c.Get(tokenTestServer.URL)
+				resp, err := c.Get(headerTestServer.URL)
 				if err != nil {
 					t.Fatal(err)
 				}

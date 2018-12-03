@@ -1,13 +1,16 @@
-package mesos
+package dcosutil
 
 import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/influxdata/telegraf/internal"
 
 	"github.com/dcos/dcos-go/dcos/http/transport"
 )
@@ -18,28 +21,29 @@ type DCOSConfig struct {
 	UserAgent         string `toml:"user_agent"`
 }
 
-// transport returns a transport implementing http.RoundTripper
-func (c *DCOSConfig) transport() (http.RoundTripper, error) {
+const defaultUserAgent = "Telegraf"
+
+func GetUserAgent(override string) string {
+	userAgent := defaultUserAgent
+	if override != "" {
+		userAgent = override
+	}
+	return fmt.Sprintf("%s/%s", userAgent, internal.Version())
+}
+
+// Transport returns a transport implementing http.RoundTripper
+func (c *DCOSConfig) Transport() (http.RoundTripper, error) {
 	tr, err := getTransport(c.CACertificatePath)
 	if err != nil {
 		return nil, err
 	}
 
 	if c.IAMConfigPath != "" {
-		var rt http.RoundTripper
-		var err error
-		if c.UserAgent != "" {
-			rt, err = transport.NewRoundTripper(
-				tr,
-				transport.OptionReadIAMConfig(c.IAMConfigPath),
-				transport.OptionUserAgent(c.UserAgent),
-			)
-		} else {
-			rt, err = transport.NewRoundTripper(
-				tr,
-				transport.OptionReadIAMConfig(c.IAMConfigPath),
-			)
-		}
+		rt, err := transport.NewRoundTripper(
+			tr,
+			transport.OptionReadIAMConfig(c.IAMConfigPath),
+			transport.OptionUserAgent(GetUserAgent(c.UserAgent)),
+		)
 		if err != nil {
 			return nil, err
 		}

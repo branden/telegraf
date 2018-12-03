@@ -10,10 +10,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/dcosutil"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"github.com/dcos/dcos-go/dcos/http/transport"
 
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/agent"
@@ -36,12 +35,10 @@ const sampleConfig = `
 
 // DCOSContainers describes the options available to this plugin
 type DCOSContainers struct {
-	MesosAgentUrl     string
-	Timeout           internal.Duration
-	CaCertificatePath string
-	IamConfigPath     string
-	UserAgent         string
-	client            *httpcli.Client
+	MesosAgentUrl string
+	Timeout       internal.Duration
+	client        *httpcli.Client
+	dcosutil.DCOSConfig
 }
 
 // measurement is a combination of fields and tags specific to those fields
@@ -144,37 +141,21 @@ func (dc *DCOSContainers) getClient() (*httpcli.Client, error) {
 	}
 
 	uri := dc.MesosAgentUrl + "/api/v1"
-	client := httpcli.New(httpcli.Endpoint(uri))
+	client := httpcli.New(httpcli.Endpoint(uri), httpcli.DefaultHeader("User-Agent",
+		dcosutil.GetUserAgent(dc.UserAgent)))
 	cfgOpts := []httpcli.ConfigOpt{}
 	opts := []httpcli.Opt{}
 
-	var tr *http.Transport
 	var rt http.RoundTripper
 	var err error
 
-	if dc.CaCertificatePath != "" {
-		if tr, err = getTransport(dc.CaCertificatePath); err != nil {
-			return client, err
+	if dc.CACertificatePath != "" {
+		if rt, err = dc.DCOSConfig.Transport(); err != nil {
+			return nil, fmt.Errorf("error creating transport: %s", err)
 		}
-	}
-
-	if dc.IamConfigPath != "" {
-		if dc.UserAgent != "" {
-			rt, err = transport.NewRoundTripper(
-				tr,
-				transport.OptionReadIAMConfig(dc.IamConfigPath),
-				transport.OptionUserAgent(dc.UserAgent),
-			)
-		} else {
-			rt, err = transport.NewRoundTripper(
-				tr,
-				transport.OptionReadIAMConfig(dc.IamConfigPath),
-			)
+		if dc.IAMConfigPath != "" {
+			cfgOpts = append(cfgOpts, httpcli.RoundTripper(rt))
 		}
-		if err != nil {
-			return client, err
-		}
-		cfgOpts = append(cfgOpts, httpcli.RoundTripper(rt))
 	}
 	opts = append(opts, httpcli.Do(httpcli.With(cfgOpts...)))
 	client.With(opts...)
