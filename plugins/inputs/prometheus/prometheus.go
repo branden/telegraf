@@ -4,18 +4,27 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/dcosutil"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
+	"github.com/mesos/mesos-go/api/v1/lib"
+	"github.com/mesos/mesos-go/api/v1/lib/agent"
+	"github.com/mesos/mesos-go/api/v1/lib/agent/calls"
+	"github.com/mesos/mesos-go/api/v1/lib/httpcli"
+	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpagent"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
@@ -29,6 +38,11 @@ type Prometheus struct {
 
 	// Location of kubernetes config file
 	KubeConfig string
+
+	// The URL of the local mesos agent
+	MesosAgentUrl string
+	MesosTimeout  internal.Duration
+	dcosutil.DCOSConfig
 
 	// Bearer Token authorization file path
 	BearerToken       string `toml:"bearer_token"`
@@ -46,6 +60,8 @@ type Prometheus struct {
 	kubernetesPods map[string]URLAndAddress
 	cancel         context.CancelFunc
 	wg             sync.WaitGroup
+
+	mesosClient *httpcli.Client
 }
 
 var sampleConfig = `
@@ -66,11 +82,21 @@ var sampleConfig = `
   ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
 
+  ## The URL of the local mesos agent
+  mesos_agent_url = "http://$NODE_PRIVATE_IP:5051"
+	## The period after which requests to mesos agent should time out
+	mesos_timeout = "10s"
+
+  ## The user agent to send with requests
+  user_agent = "telegraf-prometheus"
+  ## Optional IAM configuration
+  # ca_certificate_path = "/run/dcos/pki/CA/ca-bundle.crt"
+  # iam_config_path = "/run/dcos/etc/dcos-telegraf/service_account.json"
+
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
   ## OR
   # bearer_token_string = "abc_123"
-
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
 
@@ -136,6 +162,7 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 		allURLs[k] = v
 	}
 
+	// Kubernetes service discovery
 	for _, service := range p.KubernetesServices {
 		URL, err := url.Parse(service)
 		if err != nil {
@@ -156,6 +183,35 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 			}
 		}
 	}
+
+	// Mesos service discovery
+	if p.MesosAgentUrl != "" {
+		client, err := p.getMesosClient()
+		if err != nil {
+			log.Printf("E! %s", err)
+			return allURLs, err
+		}
+
+		cli := httpagent.NewSender(client.Send)
+		ctx, cancel := context.WithTimeout(context.Background(), p.MesosTimeout.Duration)
+		defer cancel()
+
+		tasks, err := p.getTasks(ctx, cli)
+		if err != nil {
+			log.Printf("E! %s", err)
+			return allURLs, err
+		}
+
+		for _, service := range getMesosTaskPrometheusURLs(tasks) {
+			URL, err := url.Parse(service)
+			if err != nil {
+				log.Printf("E! %s", err)
+				continue
+			}
+			allURLs = append(allURLs, URLAndAddress{URL: URL, OriginalURL: URL})
+		}
+	}
+
 	return allURLs, nil
 }
 
@@ -321,10 +377,164 @@ func (p *Prometheus) Stop() {
 	p.wg.Wait()
 }
 
+// getMesosClient returns an httpcli client configured with the available levels of
+// TLS and IAM according to flags set in the config
+func (p *Prometheus) getMesosClient() (*httpcli.Client, error) {
+	if p.mesosClient != nil {
+		return p.mesosClient, nil
+	}
+
+	uri := p.MesosAgentUrl + "/api/v1"
+	client := httpcli.New(httpcli.Endpoint(uri), httpcli.DefaultHeader("User-Agent",
+		dcosutil.GetUserAgent(p.UserAgent)))
+	cfgOpts := []httpcli.ConfigOpt{}
+	opts := []httpcli.Opt{}
+
+	var rt http.RoundTripper
+	var err error
+
+	if p.CACertificatePath != "" {
+		if rt, err = p.DCOSConfig.Transport(); err != nil {
+			return nil, fmt.Errorf("error creating transport: %s", err)
+		}
+		if p.IAMConfigPath != "" {
+			cfgOpts = append(cfgOpts, httpcli.RoundTripper(rt))
+		}
+	}
+	opts = append(opts, httpcli.Do(httpcli.With(cfgOpts...)))
+	client.With(opts...)
+
+	p.mesosClient = client
+	return client, nil
+}
+
+// getTasks requests tasks from the operator API
+func (p *Prometheus) getTasks(ctx context.Context, cli calls.Sender) (*agent.Response_GetTasks, error) {
+	resp, err := cli.Send(ctx, calls.NonStreaming(calls.GetTasks()))
+	if err != nil {
+		return nil, err
+	}
+	r, err := processResponse(resp, agent.Response_GET_TASKS)
+	if err != nil {
+		return nil, err
+	}
+
+	gs := r.GetGetTasks()
+	if gs == nil {
+		return nil, errors.New("the getTasks response from the mesos agent was empty")
+	}
+	return gs, nil
+}
+
+// processResponse reads the response from a triggered request, verifies its
+// type, and returns an agent response
+func processResponse(resp mesos.Response, t agent.Response_Type) (agent.Response, error) {
+	var r agent.Response
+	defer func() {
+		if resp != nil {
+			resp.Close()
+		}
+	}()
+	for {
+		if err := resp.Decode(&r); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return r, err
+		}
+	}
+	if r.GetType() == t {
+		return r, nil
+	} else {
+		return r, fmt.Errorf("processResponse expected type %q, got %q", t, r.GetType())
+	}
+}
+
+// getMesosTaskPrometheusURLs converts a list of tasks to a list of Prometheus
+// URLs to scrape
+func getMesosTaskPrometheusURLs(tasks *agent.Response_GetTasks) []string {
+	results := []string{}
+	for _, t := range tasks.GetLaunchedTasks() {
+		for _, endpoint := range getEndpointsFromTaskPorts(&t) {
+			results = append(results, endpoint)
+		}
+		if endpoint, ok := getEndpointFromTaskLabels(&t); ok {
+			results = append(results, endpoint)
+		}
+	}
+	return results
+}
+
+// getEndpointsFromTaskPorts retrieves a map of ports end enpoints from which
+// Prometheus metrics can be retrieved from a given task.
+func getEndpointsFromTaskPorts(t *mesos.Task) []string {
+	endpoints := []string{}
+
+	// loop over the task's ports, adding them if they are appropriately labelled
+	taskPorts := getPortsFromTask(t)
+	for _, p := range taskPorts {
+		portLabels := simplifyLabels(p.GetLabels())
+		if portLabels["DCOS_METRICS_FORMAT"] == "prometheus" {
+			route := "/metrics"
+			if ep := portLabels["DCOS_METRICS_ENDPOINT"]; ep != "" {
+				route = ep
+			}
+			endpoints = append(endpoints, fmt.Sprintf("http://localhost:%d%s", p.Number, route))
+		}
+	}
+	return endpoints
+}
+
+// getEndpointFromTaskLabels cross-references the task's DCOS_METRICS_PORT_INDEX
+// label, if present, with its ports to yield an endpoint.
+func getEndpointFromTaskLabels(t *mesos.Task) (string, bool) {
+	taskPorts := getPortsFromTask(t)
+	taskLabels := simplifyLabels(t.GetLabels())
+	if taskLabels["DCOS_METRICS_FORMAT"] != "prometheus" {
+		return "", false
+	}
+	index, err := strconv.Atoi(taskLabels["DCOS_METRICS_PORT_INDEX"])
+	if err != nil {
+		log.Printf("E! Could not retrieve port index for %s: %s", t.GetTaskID(), err)
+		return "", false
+	}
+	if index < 0 || index >= len(taskPorts) {
+		log.Printf("E! Could not retrieve port index %d for task %s", index, t.GetTaskID())
+		return "", false
+	}
+	route := "/metrics"
+	if ep := taskLabels["DCOS_METRICS_ENDPOINT"]; ep != "" {
+		route = ep
+	}
+	return fmt.Sprintf("http://localhost:%d%s", taskPorts[index].Number, route), true
+}
+
+// getPortsFromTask is a convenience method to retrieve a task's ports
+func getPortsFromTask(t *mesos.Task) []mesos.Port {
+	if d := t.GetDiscovery(); d != nil {
+		if pp := d.GetPorts(); pp != nil {
+			return pp.Ports
+		}
+	}
+	return []mesos.Port{}
+}
+
+// simplifyLabels converts a Labels object to a hashmap
+func simplifyLabels(ll *mesos.Labels) map[string]string {
+	results := map[string]string{}
+	if ll != nil {
+		for _, l := range ll.Labels {
+			results[l.GetKey()] = l.GetValue()
+		}
+	}
+	return results
+}
+
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
 			ResponseTimeout: internal.Duration{Duration: time.Second * 3},
+			MesosTimeout:    internal.Duration{Duration: time.Second * 10},
 			kubernetesPods:  map[string]URLAndAddress{},
 		}
 	})
