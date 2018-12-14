@@ -15,7 +15,7 @@ The commands & flags are:
 
   --aggregator-filter <filter>   filter the aggregators to enable, separator is :
   --config <file>                configuration file to load
-  --config-directory <directory> directory containing additional *.conf files
+  --config-directory <dirs>      directories (comma-delimited) containing additional *.conf files
   --debug                        turn on debug logging
   --input-filter <filter>        filter the inputs to enable, separator is :
   --input-list                   print available input plugins.
@@ -39,7 +39,7 @@ Examples:
   # generate config with only cpu input & influxdb output plugins defined
   telegraf --input-filter cpu --output-filter influxdb config
 
-  # run a single telegraf collection, outputing metrics to stdout
+  # run a single telegraf collection, outputting metrics to stdout
   telegraf --config telegraf.conf --test
 
   # run telegraf with all plugins defined in config file
