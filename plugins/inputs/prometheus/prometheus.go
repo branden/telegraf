@@ -202,13 +202,8 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 			return allURLs, err
 		}
 
-		for _, service := range getMesosTaskPrometheusURLs(tasks) {
-			URL, err := url.Parse(service)
-			if err != nil {
-				log.Printf("E! %s", err)
-				continue
-			}
-			allURLs = append(allURLs, URLAndAddress{URL: URL, OriginalURL: URL})
+		for _, url := range getMesosTaskPrometheusURLs(tasks) {
+			allURLs[url.URL.String()] = url
 		}
 	}
 
@@ -452,17 +447,37 @@ func processResponse(resp mesos.Response, t agent.Response_Type) (agent.Response
 
 // getMesosTaskPrometheusURLs converts a list of tasks to a list of Prometheus
 // URLs to scrape
-func getMesosTaskPrometheusURLs(tasks *agent.Response_GetTasks) []string {
-	results := []string{}
+func getMesosTaskPrometheusURLs(tasks *agent.Response_GetTasks) []URLAndAddress {
+	results := []URLAndAddress{}
 	for _, t := range tasks.GetLaunchedTasks() {
 		for _, endpoint := range getEndpointsFromTaskPorts(&t) {
-			results = append(results, endpoint)
+			uat, err := makeURLAndAddress(t, endpoint)
+			if err != nil {
+				log.Printf("E! %s", err)
+				continue
+			}
+			results = append(results, uat)
 		}
 		if endpoint, ok := getEndpointFromTaskLabels(&t); ok {
-			results = append(results, endpoint)
+			uat, err := makeURLAndAddress(t, endpoint)
+			if err != nil {
+				log.Printf("E! %s", err)
+				continue
+			}
+			results = append(results, uat)
 		}
 	}
 	return results
+}
+
+func makeURLAndAddress(task mesos.Task, endpoint string) (URLAndAddress, error) {
+	URL, err := url.Parse(endpoint)
+	cid, _ := getContainerIDs(task.GetStatuses())
+	return URLAndAddress{
+		URL:         URL,
+		OriginalURL: URL,
+		Tags:        map[string]string{"container_id": cid},
+	}, err
 }
 
 // getEndpointsFromTaskPorts retrieves a map of ports end enpoints from which
@@ -517,6 +532,27 @@ func getPortsFromTask(t *mesos.Task) []mesos.Port {
 		}
 	}
 	return []mesos.Port{}
+}
+
+// getContainerIDs retrieves the container ID and the parent container ID of a
+// task from its TaskStatus. The container ID corresponds to the task's
+// container, the parent container ID corresponds to the task's executor's
+// container.
+func getContainerIDs(statuses []mesos.TaskStatus) (containerID string, parentContainerID string) {
+	// Container ID is held in task status
+	for _, s := range statuses {
+		if cs := s.GetContainerStatus(); cs != nil {
+			if cid := cs.GetContainerID(); cid != nil {
+				containerID = cid.GetValue()
+				if pcid := cid.GetParent(); pcid != nil {
+					parentContainerID = pcid.GetValue()
+					return
+				}
+				return
+			}
+		}
+	}
+	return
 }
 
 // simplifyLabels converts a Labels object to a hashmap
