@@ -42,7 +42,9 @@ func (t *producerTranslator) Translate(metric telegraf.Metric) (msg producers.Me
 	// We assume any metric with a container_id tag but without a metric_type tag is a container metric from the
 	// dcos_containers input.
 	case hasAllKeys(tags, []string{"container_id"}) && !hasAnyKeys(tags, []string{"metric_type"}):
+		fmt.Printf("received container metric %s. container_id: %s, task_name: %s\n", metric.Name(), metric.Tags()["container_id"], metric.Tags()["task_name"])
 		msg = t.containerMetricsMessage(metric)
+		fmt.Printf("created container metric message %s. ContainerID: %s, TaskName: %s\n", msg.Name, msg.Dimensions.ContainerID, msg.Dimensions.TaskName)
 
 	// App metrics
 	// We assume any metric with both a container_id tag and a metric_type tag is an app metric from the dcos_statsd
