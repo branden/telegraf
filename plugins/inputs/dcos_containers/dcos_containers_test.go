@@ -10,6 +10,7 @@ import (
 )
 
 type testCase struct {
+	name         string
 	fixture      string
 	measurements map[string]map[string]interface{}
 	tags         map[string]string
@@ -19,12 +20,14 @@ type testCase struct {
 var (
 	TEST_CASES = []testCase{
 		testCase{
+			name:         "empty",
 			fixture:      "empty",
 			measurements: map[string]map[string]interface{}{},
 			tags:         map[string]string{},
 			ts:           0,
 		},
 		testCase{
+			name:    "normal",
 			fixture: "normal",
 			measurements: map[string]map[string]interface{}{
 				"cpus": map[string]interface{}{
@@ -49,15 +52,16 @@ var (
 			ts: 1388534400,
 		},
 		testCase{
-			fixture: "blkio",
+			name:    "blkio cfq",
+			fixture: "blkio_cfq",
 			measurements: map[string]map[string]interface{}{
 				"blkio": map[string]interface{}{
-					"io_serviced":      uint64(1),
-					"io_service_bytes": uint64(2),
-					"io_service_time":  uint64(3),
-					"io_wait_time":     uint64(4),
-					"io_merged":        uint64(5),
-					"io_queued":        uint64(6),
+					"io_serviced_total":      uint64(1),
+					"io_service_bytes_total": uint64(2),
+					"io_service_time_total":  uint64(3),
+					"io_wait_time_total":     uint64(4),
+					"io_merged_total":        uint64(5),
+					"io_queued_total":        uint64(6),
 				},
 			},
 			tags: map[string]string{
@@ -67,12 +71,161 @@ var (
 			},
 			ts: 1388534400,
 		},
+		testCase{
+			name:    "blkio cfq recursive",
+			fixture: "blkio_cfq_recursive",
+			measurements: map[string]map[string]interface{}{
+				"blkio": map[string]interface{}{
+					"io_serviced_total":      uint64(1),
+					"io_service_bytes_total": uint64(2),
+					"io_service_time_total":  uint64(3),
+					"io_wait_time_total":     uint64(4),
+					"io_merged_total":        uint64(5),
+					"io_queued_total":        uint64(6),
+				},
+			},
+			tags: map[string]string{
+				"container_id": "abc123",
+				"device":       "default",
+				"policy":       "cfq_recursive",
+			},
+			ts: 1388534400,
+		},
+		testCase{
+			name:    "blkio throttling",
+			fixture: "blkio_throttling",
+			measurements: map[string]map[string]interface{}{
+				"blkio": map[string]interface{}{
+					"io_serviced_total":      uint64(1),
+					"io_serviced_read":       uint64(11),
+					"io_service_bytes_total": uint64(2),
+					"io_service_bytes_async": uint64(22),
+				},
+			},
+			tags: map[string]string{
+				"container_id": "abc123",
+				"device":       "111.22",
+				"policy":       "throttling",
+			},
+			ts: 1388534400,
+		},
+		testCase{
+			name:    "blkio throttling",
+			fixture: "blkio_throttling",
+			measurements: map[string]map[string]interface{}{
+				"blkio": map[string]interface{}{
+					"io_serviced_total":      uint64(1),
+					"io_serviced_read":       uint64(11),
+					"io_service_bytes_total": uint64(2),
+					"io_service_bytes_async": uint64(22),
+				},
+			},
+			tags: map[string]string{
+				"container_id": "abc123",
+				"device":       "333.44",
+				"policy":       "throttling",
+			},
+			ts: 1388534400,
+		},
+		testCase{
+			name:    "blkio throttling",
+			fixture: "blkio_throttling",
+			measurements: map[string]map[string]interface{}{
+				"blkio": map[string]interface{}{
+					"io_serviced_total":      uint64(1),
+					"io_serviced_read":       uint64(11),
+					"io_service_bytes_total": uint64(2),
+					"io_service_bytes_async": uint64(22),
+				},
+			},
+			tags: map[string]string{
+				"container_id": "abc123",
+				"device":       "222.33",
+				"policy":       "throttling",
+			},
+			ts: 1388534400,
+		},
+		testCase{
+			name:    "disk statistics",
+			fixture: "blkio_cfq",
+			measurements: map[string]map[string]interface{}{
+				"disk": map[string]interface{}{
+					"limit_bytes": uint64(1073741824),
+					"used_bytes":  uint64(4096),
+				},
+			},
+			tags: map[string]string{
+				"container_id":                 "abc123",
+				"volume_persistence_id":        "blkio#vol#7fac4205-a714-11e8-a05e-fa1a5b5940b8",
+				"volume_persistence_principal": "dcos_marathon",
+			},
+			ts: 1388534400,
+		},
+		testCase{
+			name:    "perf",
+			fixture: "blkio_cfq",
+			measurements: map[string]map[string]interface{}{
+				"perf": map[string]interface{}{
+					"timestamp": 1535056712.427976,
+				},
+			},
+			tags: map[string]string{
+				"container_id": "abc123",
+			},
+			ts: 1388534400,
+		},
+		testCase{
+			name:    "net traffic control",
+			fixture: "net_traffic_control",
+			measurements: map[string]map[string]interface{}{
+				"net": map[string]interface{}{
+					"tx_backlog":     uint64(1),
+					"tx_bytes":       uint64(2),
+					"tx_dropped":     uint64(3),
+					"tx_over_limits": uint64(4),
+					"tx_packets":     uint64(5),
+					"tx_qlen":        uint64(6),
+					"tx_rate_bps":    uint64(7),
+					"tx_rate_pps":    uint64(8),
+					"tx_requeues":    uint64(9),
+				},
+			},
+			tags: map[string]string{
+				"container_id": "abc123",
+				"id":           "tx_bw_cap",
+			},
+			ts: 1388534400,
+		},
+		testCase{
+			name:    "net snmp",
+			fixture: "net_snmp",
+			measurements: map[string]map[string]interface{}{
+				"net": map[string]interface{}{
+					"ip_forwarding":       int64(1),
+					"ip_default_ttl":      int64(2),
+					"ip_in_receives":      int64(3),
+					"icmp_in_msgs":        int64(1),
+					"icmp_in_errors":      int64(2),
+					"icmp_in_csum_errors": int64(3),
+					"tcp_rto_algorithm":   int64(1),
+					"tcp_rto_min":         int64(2),
+					"tcp_rto_max":         int64(3),
+					"udp_in_datagrams":    int64(1),
+					"udp_no_ports":        int64(2),
+					"udp_in_errors":       int64(3),
+				},
+			},
+			tags: map[string]string{
+				"container_id": "abc123",
+			},
+			ts: 1388534400,
+		},
 	}
 )
 
 func TestGather(t *testing.T) {
 	for _, tc := range TEST_CASES {
-		t.Run(tc.fixture, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 
 			server := startTestServer(t, tc.fixture)
