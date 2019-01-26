@@ -29,6 +29,19 @@ in Prometheus format.
   # bearer_token = "/path/to/bearer/token"
   ## OR
   # bearer_token_string = "abc_123"
+  ## The URL of the local mesos agent
+  mesos_agent_url = "http://$NODE_PRIVATE_IP:5051"
+  ## The period after which requests to mesos agent should time out
+  mesos_timeout = "10s"
+
+  ## The user agent to send with requests
+  user_agent = "Telegraf-prometheus"
+  ## Optional IAM configuration
+  # ca_certificate_path = "/run/dcos/pki/CA/ca-bundle.crt"
+  # iam_config_path = "/run/dcos/etc/dcos-telegraf/service_account.json"
+
+  ## Use bearer token for authorization
+  # bearer_token = /path/to/bearer/token
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
@@ -63,6 +76,20 @@ Currently the following annotation are supported:
 * `prometheus.io/scheme` If the metrics endpoint is secured then you will need to set this to `https` & most likely set the tls config. (default 'http')
 * `prometheus.io/path` Override the path for the metrics endpoint on the service. (default '/metrics')
 * `prometheus.io/port` Used to override the port. (default 9102)
+#### Mesos Service Discovery
+
+The URL in the `mesos_agent_url` parameter will be used to discover,
+via the Mesos state endpoint, the ports on Mesos tasks that metrics
+may be exposed on. Collection will be attempted throughout the life
+of the task.
+
+To allow collection of the metrics exposed on any given port (or multiple ports), tasks may EITHER:
+* Label the port with `DCOS_METRICS_FORMAT=prometheus`
+
+OR
+
+* Label the task with `DCOS_METRICS_FORMAT=prometheus`
+* Label the task with the index of the metrics port eg. `DCOS_METRICS_PORT=0`
 
 #### Bearer Token
 

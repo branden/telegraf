@@ -156,6 +156,8 @@ For documentation on the latest development code see the [documentation index][d
 * [DC/OS](./plugins/inputs/dcos)
 * [diskio](./plugins/inputs/diskio)
 * [disk](./plugins/inputs/disk)
+* [dcos_containers](./plugins/inputs/dcos_containers)
+* [dcos_statsd](./plugins/inputs/dcos_statsd)
 * [disque](./plugins/inputs/disque)
 * [dmcache](./plugins/inputs/dmcache)
 * [dns query time](./plugins/inputs/dns_query)
@@ -312,6 +314,8 @@ For documentation on the latest development code see the [documentation index][d
 
 * [converter](./plugins/processors/converter)
 * [enum](./plugins/processors/enum)
+* [dcos_metadata](./plugins/processors/dcos_metadata)
+* [lowercase](./plugins/processors/lowercase)
 * [override](./plugins/processors/override)
 * [parser](./plugins/processors/parser)
 * [printer](./plugins/processors/printer)
@@ -340,6 +344,7 @@ For documentation on the latest development code see the [documentation index][d
 * [cloud_pubsub](./plugins/outputs/cloud_pubsub) Google Cloud Pub/Sub
 * [cratedb](./plugins/outputs/cratedb)
 * [datadog](./plugins/outputs/datadog)
+* [dcos_metrics](./plugins/outputs/dcos_metrics)
 * [discard](./plugins/outputs/discard)
 * [elasticsearch](./plugins/outputs/elasticsearch)
 * [file](./plugins/outputs/file)
