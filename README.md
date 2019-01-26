@@ -154,6 +154,7 @@ For documentation on the latest development code see the [documentation index][d
 * [DC/OS](./plugins/inputs/dcos)
 * [diskio](./plugins/inputs/diskio)
 * [disk](./plugins/inputs/disk)
+* [dcos_containers](./plugins/inputs/dcos_containers)
 * [disque](./plugins/inputs/disque)
 * [dmcache](./plugins/inputs/dmcache)
 * [dns query time](./plugins/inputs/dns_query)
@@ -310,6 +311,7 @@ For documentation on the latest development code see the [documentation index][d
 
 * [converter](./plugins/processors/converter)
 * [enum](./plugins/processors/enum)
+* [dcos_metadata](./plugins/processors/dcos_metadata)
 * [override](./plugins/processors/override)
 * [parser](./plugins/processors/parser)
 * [printer](./plugins/processors/printer)
