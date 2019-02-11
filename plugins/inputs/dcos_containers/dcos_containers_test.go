@@ -19,18 +19,18 @@ type testCase struct {
 
 var (
 	TEST_CASES = []testCase{
-		testCase{
+		{
 			name:         "empty",
 			fixture:      "empty",
 			measurements: map[string]map[string]interface{}{},
 			tags:         map[string]string{},
 			ts:           0,
 		},
-		testCase{
+		{
 			name:    "normal",
 			fixture: "normal",
 			measurements: map[string]map[string]interface{}{
-				"cpus": map[string]interface{}{
+				"cpus": {
 					"limit":               8.25,
 					"nr_periods":          uint32(769021),
 					"nr_throttled":        uint32(1046),
@@ -38,7 +38,7 @@ var (
 					"throttled_time_secs": 352.597023453,
 					"user_time_secs":      96348.84,
 				},
-				"mem": map[string]interface{}{
+				"mem": {
 					"anon_bytes":        uint64(4845449216),
 					"file_bytes":        uint64(260165632),
 					"limit_bytes":       uint64(7650410496),
@@ -51,11 +51,11 @@ var (
 			},
 			ts: 1388534400,
 		},
-		testCase{
+		{
 			name:    "blkio cfq",
 			fixture: "blkio_cfq",
 			measurements: map[string]map[string]interface{}{
-				"blkio": map[string]interface{}{
+				"blkio": {
 					"io_serviced_total":      uint64(1),
 					"io_service_bytes_total": uint64(2),
 					"io_service_time_total":  uint64(3),
@@ -71,11 +71,11 @@ var (
 			},
 			ts: 1388534400,
 		},
-		testCase{
+		{
 			name:    "blkio cfq recursive",
 			fixture: "blkio_cfq_recursive",
 			measurements: map[string]map[string]interface{}{
-				"blkio": map[string]interface{}{
+				"blkio": {
 					"io_serviced_total":      uint64(1),
 					"io_service_bytes_total": uint64(2),
 					"io_service_time_total":  uint64(3),
@@ -91,11 +91,11 @@ var (
 			},
 			ts: 1388534400,
 		},
-		testCase{
+		{
 			name:    "blkio throttling",
 			fixture: "blkio_throttling",
 			measurements: map[string]map[string]interface{}{
-				"blkio": map[string]interface{}{
+				"blkio": {
 					"io_serviced_total":      uint64(1),
 					"io_serviced_read":       uint64(11),
 					"io_service_bytes_total": uint64(2),
@@ -109,11 +109,11 @@ var (
 			},
 			ts: 1388534400,
 		},
-		testCase{
+		{
 			name:    "blkio throttling",
 			fixture: "blkio_throttling",
 			measurements: map[string]map[string]interface{}{
-				"blkio": map[string]interface{}{
+				"blkio": {
 					"io_serviced_total":      uint64(1),
 					"io_serviced_read":       uint64(11),
 					"io_service_bytes_total": uint64(2),
@@ -127,11 +127,11 @@ var (
 			},
 			ts: 1388534400,
 		},
-		testCase{
+		{
 			name:    "blkio throttling",
 			fixture: "blkio_throttling",
 			measurements: map[string]map[string]interface{}{
-				"blkio": map[string]interface{}{
+				"blkio": {
 					"io_serviced_total":      uint64(1),
 					"io_serviced_read":       uint64(11),
 					"io_service_bytes_total": uint64(2),
@@ -145,11 +145,11 @@ var (
 			},
 			ts: 1388534400,
 		},
-		testCase{
+		{
 			name:    "disk statistics",
 			fixture: "blkio_cfq",
 			measurements: map[string]map[string]interface{}{
-				"disk": map[string]interface{}{
+				"disk": {
 					"limit_bytes": uint64(1073741824),
 					"used_bytes":  uint64(4096),
 				},
@@ -161,11 +161,11 @@ var (
 			},
 			ts: 1388534400,
 		},
-		testCase{
+		{
 			name:    "perf",
 			fixture: "blkio_cfq",
 			measurements: map[string]map[string]interface{}{
-				"perf": map[string]interface{}{
+				"perf": {
 					"timestamp": 1535056712.427976,
 				},
 			},
@@ -174,11 +174,11 @@ var (
 			},
 			ts: 1388534400,
 		},
-		testCase{
+		{
 			name:    "net traffic control",
 			fixture: "net_traffic_control",
 			measurements: map[string]map[string]interface{}{
-				"net": map[string]interface{}{
+				"net": {
 					"tx_backlog":     uint64(1),
 					"tx_bytes":       uint64(2),
 					"tx_dropped":     uint64(3),
@@ -196,11 +196,11 @@ var (
 			},
 			ts: 1388534400,
 		},
-		testCase{
+		{
 			name:    "net snmp",
 			fixture: "net_snmp",
 			measurements: map[string]map[string]interface{}{
-				"net": map[string]interface{}{
+				"net": {
 					"ip_forwarding":       int64(1),
 					"ip_default_ttl":      int64(2),
 					"ip_in_receives":      int64(3),

@@ -25,13 +25,13 @@ type testCase struct {
 var (
 	TEST_CASES = []testCase{
 		// No metrics, no state; nothing to do
-		testCase{
+		{
 			fixture:  "empty",
 			inputs:   []telegraf.Metric{},
 			expected: []telegraf.Metric{},
 		},
 		// One metric, cached state; tags are added
-		testCase{
+		{
 			fixture:         "normal",
 			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
@@ -57,16 +57,16 @@ var (
 				),
 			},
 			cachedContainers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+				"abc123": {"abc123", "task", "executor", "framework",
 					map[string]string{"FOO": "bar", "BAZ": "qux"}},
 			},
 			containers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+				"abc123": {"abc123", "task", "executor", "framework",
 					map[string]string{"FOO": "bar", "BAZ": "qux"}},
 			},
 		},
 		// One metric, no cached state; no tags are added but state is updated (no additional whitelisted tags)
-		testCase{
+		{
 			fixture: "fresh",
 			inputs: []telegraf.Metric{
 				newMetric("test",
@@ -86,13 +86,13 @@ var (
 			cachedContainers: map[string]containerInfo{},
 			// We do expect the cache to be updated when apply is done
 			containers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+				"abc123": {"abc123", "task", "executor", "framework",
 					// No whitelist/whitelisted prefixes configured
 					map[string]string{}},
 			},
 		},
 		// One metric, no cached state; no tags are added but state is updated (with prefix-whitelisted tags)
-		testCase{
+		{
 			fixture:         "fresh",
 			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
@@ -113,14 +113,14 @@ var (
 			cachedContainers: map[string]containerInfo{},
 			// We do expect the cache to be updated when apply is done
 			containers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+				"abc123": {"abc123", "task", "executor", "framework",
 					// Ensure that the tags are picked up from state, including whitelisted DCOS_METRICS_-prefixed ones
 					map[string]string{"FOO": "bar", "BAZ": "qux"}},
 			},
 		},
 		// One metric, no cached state; no tags are added but state is updated (with a whitelisted tag,
 		// no prefix-whitelisted tags)
-		testCase{
+		{
 			fixture:   "fresh",
 			whitelist: []string{"WHITELISTED_METRIC"},
 			inputs: []telegraf.Metric{
@@ -141,14 +141,14 @@ var (
 			cachedContainers: map[string]containerInfo{},
 			// We do expect the cache to be updated when apply is done
 			containers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+				"abc123": {"abc123", "task", "executor", "framework",
 					// Ensure that the tags are picked up from state, including whitelisted "WHITELISTED_METRIC" tag
 					map[string]string{"WHITELISTED_METRIC": "foobar"}},
 			},
 		},
 		// One metric, no cached state; no tags are added but state is updated (
 		// with both whitelisted and prefix-whitelisted tags)
-		testCase{
+		{
 			fixture:         "fresh",
 			whitelist:       []string{"WHITELISTED_METRIC"},
 			whitelistPrefix: []string{"DCOS_METRICS_"},
@@ -170,13 +170,13 @@ var (
 			cachedContainers: map[string]containerInfo{},
 			// We do expect the cache to be updated when apply is done
 			containers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+				"abc123": {"abc123", "task", "executor", "framework",
 					// Ensure that the tags are picked up from state, including all whitelisted ones
 					map[string]string{"FOO": "bar", "BAZ": "qux", "WHITELISTED_METRIC": "foobar"}},
 			},
 		},
 		// One metric without a container ID; nothing to do
-		testCase{
+		{
 			fixture:         "unrelated",
 			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
@@ -198,7 +198,7 @@ var (
 			containers: map[string]containerInfo{},
 		},
 		// Fetching a nested container ID; not cached
-		testCase{
+		{
 			fixture:         "nested",
 			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
@@ -219,14 +219,14 @@ var (
 			// We do expect the cache to be updated when apply is done
 			// Parent container (executor) is fetched along with task
 			containers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+				"abc123": {"abc123", "task", "executor", "framework",
 					map[string]string{}},
-				"xyz123": containerInfo{"xyz123", "", "executor", "framework",
+				"xyz123": {"xyz123", "", "executor", "framework",
 					nil},
 			},
 		},
 		// Fetching a nested container ID; cached
-		testCase{
+		{
 			fixture:         "nested",
 			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
@@ -264,21 +264,21 @@ var (
 				),
 			},
 			cachedContainers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+				"abc123": {"abc123", "task", "executor", "framework",
 					map[string]string{}},
-				"xyz123": containerInfo{"xyz123", "", "executor", "framework",
+				"xyz123": {"xyz123", "", "executor", "framework",
 					nil},
 			},
 			// We do not expect the cache to be updated
 			containers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "executor", "framework",
+				"abc123": {"abc123", "task", "executor", "framework",
 					map[string]string{}},
-				"xyz123": containerInfo{"xyz123", "", "executor", "framework",
+				"xyz123": {"xyz123", "", "executor", "framework",
 					nil},
 			},
 		},
 		// No executor;
-		testCase{
+		{
 			fixture:         "noexecutor",
 			whitelistPrefix: []string{"DCOS_METRICS_"},
 			inputs: []telegraf.Metric{
@@ -301,11 +301,11 @@ var (
 				),
 			},
 			cachedContainers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "", "framework",
+				"abc123": {"abc123", "task", "", "framework",
 					map[string]string{}},
 			},
 			containers: map[string]containerInfo{
-				"abc123": containerInfo{"abc123", "task", "", "framework",
+				"abc123": {"abc123", "task", "", "framework",
 					map[string]string{}},
 			},
 		},
