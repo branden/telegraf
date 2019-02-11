@@ -261,7 +261,6 @@
   digest = "1:f409c9b273ad1b344aab73afab72a4e818e8a6f0cda815b70975f129ce774cc5"
   name = "github.com/dcos/dcos-go"
   packages = [
-    "dcos",
     "dcos/http/transport",
     "store",
   ]
@@ -993,7 +992,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:066c1020d667e25a0614b56aee1f9ac47e75c77de98eddfb51e9be02c68c1577"
+  digest = "1:4676889c7ebd9a812544831c2ebdd2e1581b00043940d883e071ac6de8ead290"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -1552,7 +1551,6 @@
     "github.com/aws/aws-sdk-go/service/kinesis",
     "github.com/bsm/sarama-cluster",
     "github.com/couchbase/go-couchbase",
-    "github.com/dcos/dcos-go/dcos",
     "github.com/dcos/dcos-go/dcos/http/transport",
     "github.com/denisenkom/go-mssqldb",
     "github.com/dgrijalva/jwt-go",
